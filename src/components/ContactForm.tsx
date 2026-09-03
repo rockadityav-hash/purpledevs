@@ -1,26 +1,48 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent } from "react";
 
-type Status = { kind: "idle" | "sending" | "success" | "error"; message?: string };
+const WHATSAPP_NUMBER = "919873960474";
+
+const projectLabels: Record<string, string> = {
+  website: "Website",
+  "web-app": "Web app",
+  ecommerce: "E-commerce",
+  design: "UI/UX or brand",
+  other: "Something else",
+};
+
+const budgetLabels: Record<string, string> = {
+  "under-5k": "Under $5k",
+  "5k-10k": "$5k–$10k",
+  "10k-25k": "$10k–$25k",
+  "25k-plus": "$25k+",
+  "not-sure": "Not sure yet",
+};
 
 export function ContactForm() {
-  const [status, setStatus] = useState<Status>({ kind: "idle" });
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus({ kind: "sending" });
     const form = event.currentTarget;
-    const data = Object.fromEntries(new FormData(form));
-    try {
-      const response = await fetch("/api/inquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-      const result = await response.json() as { message?: string };
-      if (!response.ok) throw new Error(result.message || "Your message could not be sent.");
-      form.reset();
-      setStatus({ kind: "success", message: "Message sent. We'll take a proper look and get back to you." });
-    } catch (error) {
-      setStatus({ kind: "error", message: error instanceof Error ? error.message : "Your message could not be sent. Please try again." });
-    }
+    const data = new FormData(form);
+
+    if (data.get("companyFax")) return;
+
+    const projectType = String(data.get("projectType") || "");
+    const budget = String(data.get("budget") || "");
+    const message = [
+      "New PurpleDevs project inquiry",
+      "",
+      `Name: ${String(data.get("name") || "")}`,
+      `Email: ${String(data.get("email") || "")}`,
+      `Project: ${projectLabels[projectType] || projectType}`,
+      `Budget: ${budgetLabels[budget] || budget}`,
+      "",
+      "Brief:",
+      String(data.get("summary") || ""),
+    ].join("\n");
+
+    window.location.assign(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`);
   }
 
   return (
@@ -33,7 +55,7 @@ export function ContactForm() {
       <label>Tell us the useful bit<textarea name="summary" required minLength={20} maxLength={3000} rows={7} placeholder="What needs to change, what does success look like, and when do you want to launch?" /></label>
       <label className="honeypot" aria-hidden="true">Company fax<input name="companyFax" tabIndex={-1} autoComplete="off" /></label>
       <label className="consent"><input type="checkbox" name="privacyAccepted" value="true" required /> <span>I’m happy for PurpleDevs to use these details to reply to this inquiry.</span></label>
-      <div className="form-submit"><button className="button button-primary" type="submit" disabled={status.kind === "sending"}>{status.kind === "sending" ? "Sending…" : "Send the brief →"}</button><p className={`form-status ${status.kind}`} role="status" aria-live="polite">{status.message}</p></div>
+      <div className="form-submit"><button className="button button-primary" type="submit">Send via WhatsApp →</button><p className="form-status">WhatsApp will open with your project brief ready to send.</p></div>
     </form>
   );
 }
